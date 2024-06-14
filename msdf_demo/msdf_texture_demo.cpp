@@ -20,6 +20,8 @@ struct GlyphData {
     char character;
     float x, y, width, height;
     float advance;
+    float x_offset;
+    float y_offset;
 };
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -40,17 +42,23 @@ void loadGlyphData(const std::string& jsonPath) {
 
         for (auto& glyph : metadata["glyphs"]) {
             char character = glyph["unicode"].get<char>();
-            if (glyph.contains("atlasBounds"))
-            {
+            if (glyph.contains("atlasBounds") && glyph.contains("planeBounds") ){
                 GlyphData glyphData = {
                 character,
                 glyph["atlasBounds"]["left"],
                 glyph["atlasBounds"]["bottom"],
                 glyph["atlasBounds"]["right"].get<float>() - glyph["atlasBounds"]["left"].get<float>(),
                 glyph["atlasBounds"]["top"].get<float>() - glyph["atlasBounds"]["bottom"].get<float>(),
-                glyph["advance"]
+                glyph["advance"],
+                glyph["planeBounds"]["left"],
+                glyph["planeBounds"]["bottom"],
                 };
                 glyphs[character] = glyphData;
+            }
+            else {
+                GlyphData data;
+                data.advance = glyph["advance"];
+                glyphs[character] = data;
             }
 
         }
@@ -68,6 +76,11 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
     for (c = text.begin(); c != text.end(); c++) {
         const GlyphData& glyph = glyphs[*c];
 
+        if (( *c ) == 32) {
+            x += glyph.advance * 100 * scale;
+            continue;
+        }
+
         float tx0 = glyph.x / 1024;
         float ty0 = glyph.y / 1024;
         float tx1 = (glyph.x + glyph.width) /1024;
@@ -76,13 +89,16 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
         float w = glyph.width * scale;
         float h = glyph.height * scale;
 
-        float  x0 = x;
-        float  x1 = x + w;
-        float  y0 = y;
-        float  y1 = y + h;
+        float x_off = glyph.x_offset * scale * glyph.width;
+        float y_off = glyph.y_offset * scale * glyph.height;
+
+        float  x0 = x + x_off;
+        float  x1 = x0 + w;
+        float  y0 = y + y_off;
+        float  y1 = y0 + h;
 
         vertices.insert(vertices.end(), {
-            //Position                          //TexCoords
+            //Position                         //TexCoords
             x1, y1, 0.0f,  1.0f, 0.0f, 0.0f,   tx1, ty1,
             x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
             x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1,
@@ -140,7 +156,7 @@ int main()
     glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
     loadGlyphData( "textures/msdf_test2.json"  );
-    std::vector<float> vertices = generateVertexData("HELLOWORLD!", 120.0f, 120.0f, 1.0f);
+    std::vector<float> vertices = generateVertexData("great people!", 120.0f, 120.0f, 0.5f);
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
