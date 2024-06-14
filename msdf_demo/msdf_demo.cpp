@@ -33,20 +33,20 @@ using json = nlohmann::json;
     {   0.f,  0.6f, 0.f, 0.f, 1.f }
 };*/
 
-struct GlyphData {
+/*struct GlyphData {
     char character;
     float x, y, width, height;
     float advance;
-};
+};*/
 
 GLuint vertex_buffer, vertex_shader;
 Shader* p_shader;
 GLint mvp_location, vpos_location, vtex_location;
-std::map<char, GlyphData> glyphs;
+//std::map<char, GlyphData> glyphs;
 GLuint textureID, VAO;
 int width, height;
 
-std::map<char, GlyphData> loadGlyphData(const std::string& jsonPath) {
+/*std::map<char, GlyphData> loadGlyphData(const std::string& jsonPath) {
     std::map<char, GlyphData> glyphs;
     std::ifstream inputFile(jsonPath);
     if (inputFile.is_open()) {
@@ -71,7 +71,7 @@ std::map<char, GlyphData> loadGlyphData(const std::string& jsonPath) {
         }
     }
     return glyphs;
-}
+}*/
 
 
 GLuint loadTexture(const char* path) {
@@ -103,7 +103,7 @@ GLuint loadTexture(const char* path) {
 static void startup() {
 
     // Load glyph data
-    glyphs = loadGlyphData("msdf_test2.json");
+    //glyphs = loadGlyphData("msdf_test2.json");
     // Load the texture
     textureID = loadTexture("textures/awesomeface.png");
 
@@ -120,7 +120,7 @@ static void startup() {
 
 // render line of text
 // -------------------
-void RenderText(std::string text, float x, float y, float scale )
+/*void RenderText(std::string text, float x, float y, float scale )
 {
     // activate corresponding render state
     glActiveTexture(GL_TEXTURE0);
@@ -152,7 +152,7 @@ void RenderText(std::string text, float x, float y, float scale )
              0.5f, -0.5f,  1.0f, 0.0f, // bottom right
             });
 
-        /*vertices.insert(vertices.end(), {
+        vertices.insert(vertices.end(), {
             //Position     //TexCoords
             tx1, ty1,      tx1, ty1,
             tx1, ty0,      tx1, ty0,
@@ -161,7 +161,7 @@ void RenderText(std::string text, float x, float y, float scale )
             tx1, ty0,      tx1, ty0,
             tx0, ty0,      tx0, ty0,
             tx0, ty1,      tx0, ty1
-            });*/
+            });
 
         x += glyph.advance * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
     }
@@ -179,7 +179,7 @@ void RenderText(std::string text, float x, float y, float scale )
 
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
-}
+}*/
 
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes

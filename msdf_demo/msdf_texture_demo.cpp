@@ -4,7 +4,23 @@
 
 #include <shader_m.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
+#include <fstream>
+#include <map>
+#include <nlohmann/json.hpp>
+#include <shader_m.h>
+
+using json = nlohmann::json;
+
+struct GlyphData {
+    char character;
+    float x, y, width, height;
+    float advance;
+};
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -12,6 +28,76 @@ void processInput(GLFWwindow *window);
 // settings
 const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 1024;
+
+std::map<char, GlyphData> glyphs;
+
+void loadGlyphData(const std::string& jsonPath) {
+
+    std::ifstream inputFile(jsonPath);
+    if (inputFile.is_open()) {
+        json metadata;
+        inputFile >> metadata;
+
+        for (auto& glyph : metadata["glyphs"]) {
+            char character = glyph["unicode"].get<char>();
+            if (glyph.contains("atlasBounds"))
+            {
+                GlyphData glyphData = {
+                character,
+                glyph["atlasBounds"]["left"],
+                glyph["atlasBounds"]["bottom"],
+                glyph["atlasBounds"]["right"].get<float>() - glyph["atlasBounds"]["left"].get<float>(),
+                glyph["atlasBounds"]["top"].get<float>() - glyph["atlasBounds"]["bottom"].get<float>(),
+                glyph["advance"]
+                };
+                glyphs[character] = glyphData;
+            }
+
+        }
+    }
+}
+
+
+// render line of text
+// -------------------
+std::vector<float> generateVertexData(std::string text, float x, float y, float scale ) {
+
+    std::vector<float> vertices;
+    // iterate through all characters
+    std::string::const_iterator c;
+    for (c = text.begin(); c != text.end(); c++) {
+        const GlyphData& glyph = glyphs[*c];
+
+        float tx0 = glyph.x / 1024;
+        float ty0 = glyph.y / 1024;
+        float tx1 = (glyph.x + glyph.width) /1024;
+        float ty1 = (glyph.y + glyph.height)/1024;
+
+        float w = glyph.width * scale;
+        float h = glyph.height * scale;
+
+        float  x0 = x;
+        float  x1 = x + w;
+        float  y0 = y;
+        float  y1 = y + h;
+
+        vertices.insert(vertices.end(), {
+            //Position                          //TexCoords
+            x1, y1, 0.0f,  1.0f, 0.0f, 0.0f,   tx1, ty1,
+            x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
+            x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1,
+
+            x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
+            x0, y0, 0.0f,  0.0f, 0.0f, 1.0f,   tx0, ty0,
+            x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1
+            });
+
+        x += (glyph.width + glyph.advance) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+    }
+
+    return vertices;
+}
+
 
 int main()
 {
@@ -49,19 +135,37 @@ int main()
     // build and compile our shader zprogram
     // ------------------------------------
     Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text.frag");
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    ourShader.use();
+    glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+    loadGlyphData( "textures/msdf_test2.json"  );
+    std::vector<float> vertices = generateVertexData("HELLOWORLD!", 120.0f, 120.0f, 1.0f);
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
-    float vertices[] = {
+    /*float vertices[] = {
+        // positions          // colors           // texture coords
+         1024.0f,  1024.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+         1024.0f,  0.0f,    0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+         0.0f,     1024.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
+
+         1024.0f,  0.0f,    0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+         0.0f,     0.0f,    0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+         0.0f,     1024.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+    };*/
+
+    /*float vertices[] = {
         // positions          // colors           // texture coords
          1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
          1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
         -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
 
          1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.1f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
         -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
-    };
+    };*/
+
     unsigned int indices[] = {
         0, 1, 3, // first triangle
         1, 2, 3  // second triangle
@@ -74,7 +178,7 @@ int main()
     glBindVertexArray(VAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof( float ), vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -118,38 +222,14 @@ int main()
         std::cout << "Failed to load texture" << std::endl;
     }
     stbi_image_free(data);
-    // texture 2
-    // ---------
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   // set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    data = stbi_load( "textures/awesomeface.png", &width, &height, &nrChannels, 0 );
-    if (data)
-    {
-        GLenum format = (nrChannels == 4) ? GL_RGBA : (nrChannels == 3) ? GL_RGB : GL_RED;
-        // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        //glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
 
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
-    glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
+    glUniform1i(glGetUniformLocation(ourShader.ID, "msdf"), 0);
     // or set it via the texture class
-    ourShader.setInt("texture2", 1);
+    //ourShader.setInt("texture2", 1);
 
     // render loop
     // -----------
@@ -161,20 +241,20 @@ int main()
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+        //glActiveTexture(GL_TEXTURE1);
+        //glBindTexture(GL_TEXTURE_2D, texture2);
 
         // render container
         ourShader.use();
         glBindVertexArray(VAO);
         //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glDrawArrays( GL_TRIANGLES, 0, 6 );
+        glDrawArrays( GL_TRIANGLES, 0, vertices.size() / 8 );
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
