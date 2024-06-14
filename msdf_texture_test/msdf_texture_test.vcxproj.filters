@@ -15,16 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="msdf_demo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="std_img.cpp">
+    <ClCompile Include="msdf_texture_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="glad_gl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="msdf_texture_demo.cpp">
+    <ClCompile Include="std_img.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

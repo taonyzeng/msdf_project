@@ -3,11 +3,11 @@
 uniform mat4 MVP;
 
 layout (location = 0) in vec2 vPos;
-layout (location = 1) in vec2 texCoord;
+layout (location = 1) in vec2 uvCoord;
  
-out vec2 uvCoord;
+out vec2 texCoord;
 
 void main() {
-	uvCoord = vec2(1-texCoord.x, texCoord.y);
-	gl_Position = MVP * vec4(vPos, 0.0, 1.0);
+	texCoord = vec2(uvCoord.x, uvCoord.y);
+	gl_Position = vec4(vPos, 0.0, 1.0);
 }
