@@ -17,11 +17,17 @@
 using json = nlohmann::json;
 
 struct GlyphData {
+    
     char character;
     float x, y, width, height;
     float advance;
-    float x_offset;
-    float y_offset;
+    float pl, pb, pr, pt;
+};
+
+struct AtlasMetric {
+    float fontSize;
+    float width;
+    float height;
 };
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -32,6 +38,7 @@ const unsigned int SCR_WIDTH = 1024;
 const unsigned int SCR_HEIGHT = 1024;
 
 std::map<char, GlyphData> glyphs;
+AtlasMetric atlas_metric;
 
 void loadGlyphData(const std::string& jsonPath) {
 
@@ -39,6 +46,10 @@ void loadGlyphData(const std::string& jsonPath) {
     if (inputFile.is_open()) {
         json metadata;
         inputFile >> metadata;
+
+        atlas_metric.fontSize = metadata["atlas"]["size"].get<float>();
+        atlas_metric.height = metadata["atlas"]["height"].get<float>();
+        atlas_metric.width = metadata["atlas"]["width"].get<float>();
 
         for (auto& glyph : metadata["glyphs"]) {
             char character = glyph["unicode"].get<char>();
@@ -52,6 +63,8 @@ void loadGlyphData(const std::string& jsonPath) {
                 glyph["advance"],
                 glyph["planeBounds"]["left"],
                 glyph["planeBounds"]["bottom"],
+                glyph["planeBounds"]["right"],
+                glyph["planeBounds"]["top"],
                 };
                 glyphs[character] = glyphData;
             }
@@ -73,42 +86,40 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
     std::vector<float> vertices;
     // iterate through all characters
     std::string::const_iterator c;
+    float font_size = atlas_metric.fontSize;
+    float atlas_w = atlas_metric.width;
+    float atlas_h = atlas_metric.height;
+
     for (c = text.begin(); c != text.end(); c++) {
         const GlyphData& glyph = glyphs[*c];
 
-        if (( *c ) == 32) {
-            x += glyph.advance * 100 * scale;
-            continue;
+        if ((*c) != 32) { //if it is not the space character
+            float tx0 = glyph.x / atlas_w;
+            float ty0 = glyph.y / atlas_h;
+            float tx1 = (glyph.x + glyph.width) / atlas_w;
+            float ty1 = (glyph.y + glyph.height) / atlas_h;
+
+            float w = glyph.width * scale;
+            float h = glyph.height * scale;
+
+            float  x0 = x + font_size * glyph.pl * scale;
+            float  x1 = x + font_size * glyph.pr * scale;
+            float  y0 = y + font_size * glyph.pb * scale;
+            float  y1 = y + font_size * glyph.pt * scale;
+
+            vertices.insert(vertices.end(), {
+                //Position                         //TexCoords
+                x1, y1, 0.0f,  1.0f, 0.0f, 0.0f,   tx1, ty1,
+                x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
+                x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1,
+
+                x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
+                x0, y0, 0.0f,  0.0f, 0.0f, 1.0f,   tx0, ty0,
+                x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1
+            });
         }
 
-        float tx0 = glyph.x / 1024;
-        float ty0 = glyph.y / 1024;
-        float tx1 = (glyph.x + glyph.width) /1024;
-        float ty1 = (glyph.y + glyph.height)/1024;
-
-        float w = glyph.width * scale;
-        float h = glyph.height * scale;
-
-        float x_off = glyph.x_offset * scale * glyph.width;
-        float y_off = glyph.y_offset * scale * glyph.height;
-
-        float  x0 = x + x_off;
-        float  x1 = x0 + w;
-        float  y0 = y + y_off;
-        float  y1 = y0 + h;
-
-        vertices.insert(vertices.end(), {
-            //Position                         //TexCoords
-            x1, y1, 0.0f,  1.0f, 0.0f, 0.0f,   tx1, ty1,
-            x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
-            x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1,
-
-            x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   tx1, ty0,
-            x0, y0, 0.0f,  0.0f, 0.0f, 1.0f,   tx0, ty0,
-            x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1
-            });
-
-        x += (glyph.width + glyph.advance) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        x += (font_size * glyph.advance) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
     }
 
     return vertices;
@@ -156,36 +167,8 @@ int main()
     glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
     loadGlyphData( "textures/msdf_test2.json"  );
-    std::vector<float> vertices = generateVertexData("great people!", 120.0f, 120.0f, 0.5f);
+    std::vector<float> vertices = generateVertexData("This is a test for great people!", 120.0f, 512.0f, 0.25f);
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    /*float vertices[] = {
-        // positions          // colors           // texture coords
-         1024.0f,  1024.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-         1024.0f,  0.0f,    0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-         0.0f,     1024.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
-
-         1024.0f,  0.0f,    0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-         0.0f,     0.0f,    0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-         0.0f,     1024.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
-    };*/
-
-    /*float vertices[] = {
-        // positions          // colors           // texture coords
-         1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
-
-         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
-    };*/
-
-    unsigned int indices[] = {
-        0, 1, 3, // first triangle
-        1, 2, 3  // second triangle
-    };
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
@@ -195,9 +178,6 @@ int main()
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof( float ), vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
