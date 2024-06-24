@@ -17,7 +17,7 @@
 using json = nlohmann::json;
 
 struct GlyphData {
-    
+
     char character;
     float x, y, width, height;
     float advance;
@@ -39,6 +39,7 @@ const unsigned int SCR_HEIGHT = 1024;
 
 std::map<char, GlyphData> glyphs;
 AtlasMetric atlas_metric;
+float kerning_table[256][256];
 
 void loadGlyphData(const std::string& jsonPath) {
 
@@ -75,6 +76,15 @@ void loadGlyphData(const std::string& jsonPath) {
             }
 
         }
+
+        memset( kerning_table, 0.0f, sizeof( kerning_table ) );
+        for (auto& kerning : metadata["kerning"]) {
+            int unicode1 = kerning["unicode1"].get<int>();
+            int unicode2 = kerning["unicode2"].get<int>();
+
+            float kerning_val = kerning["advance"].get<float>();
+            kerning_table[unicode1][unicode2] = kerning_val;
+        }
     }
 }
 
@@ -89,6 +99,7 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
     float font_size = atlas_metric.fontSize;
     float atlas_w = atlas_metric.width;
     float atlas_h = atlas_metric.height;
+    char prev_ch = 0;
 
     for (c = text.begin(); c != text.end(); c++) {
         const GlyphData& glyph = glyphs[*c];
@@ -118,8 +129,9 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
                 x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   tx0, ty1
             });
         }
-
-        x += (font_size * glyph.advance) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        float kerning = kerning_table[prev_ch][*c];
+        x += (font_size * (glyph.advance + kerning)) * scale; // bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+        prev_ch = *c;
     }
 
     return vertices;
@@ -167,7 +179,7 @@ int main()
     glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
     loadGlyphData( "textures/msdf_test2.json"  );
-    std::vector<float> vertices = generateVertexData("This is a test for great people!", 120.0f, 512.0f, 0.25f);
+    std::vector<float> vertices = generateVertexData("Wg This is a test for great people!", 120.0f, 512.0f, 1.0f);
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
