@@ -173,13 +173,16 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text.frag");
+    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text_halo2.frag");
     glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
     ourShader.use();
     glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+    std::string text = "lynx tuft frogs, dolphins abduct by proxy the ever awkward klutz, dud, dummkopf,"
+        "jinx snubnose filmgoer, orphan sgt. ";
+
     loadGlyphData( "textures/msdf_test2.json"  );
-    std::vector<float> vertices = generateVertexData("Wg This is a test for great people!", 120.0f, 512.0f, 1.0f);
+    std::vector<float> vertices = generateVertexData(text, 10.0f, SCR_HEIGHT - 120, 0.8f);
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);

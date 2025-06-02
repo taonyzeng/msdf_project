@@ -107,12 +107,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\Learning\glfw-3.4.bin.WIN64\glm;D:\Learning\glfw-3.4.bin.WIN64\include;D:\Learning\glfw-3.4.bin.WIN64\deps;D:\Learning\glfw-3.4.bin.WIN64\json\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>glfw-3.4.bin.WIN64\glm;glfw-3.4.bin.WIN64\include;glfw-3.4.bin.WIN64\deps;glfw-3.4.bin.WIN64\json\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>D:\Learning\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
