@@ -137,6 +137,31 @@ std::vector<float> generateVertexData(std::string text, float x, float y, float 
     return vertices;
 }
 
+// render line of text
+// -------------------
+/*std::vector<float> generateVertexData(std::string text, float x, float y, float scale ) {
+
+    std::vector<float> vertices;
+
+    float  x0 = x + 48.0f;
+    float  x1 = x + 48.0f;
+    float  y0 = y + 48.0f;
+    float  y1 = y + 48.0f;
+
+    vertices.insert(vertices.end(), {
+        //Position                         //TexCoords
+        x1, y1, 0.0f,  1.0f, 0.0f, 0.0f,   1.0f, 1.0f,
+        x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+        x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f,
+
+        x1, y0, 0.0f,  0.0f, 1.0f, 0.0f,   1.0f, 0.0f,
+        x0, y0, 0.0f,  0.0f, 0.0f, 1.0f,   0.0f, 0.0f,
+        x0, y1, 0.0f,  1.0f, 1.0f, 0.0f,   0.0f, 1.0f
+    });
+
+    return vertices;
+}*/
+
 
 int main()
 {
@@ -173,16 +198,16 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text_halo2.frag");
-    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text_glow4.frag");
     ourShader.use();
+
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
     glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-    std::string text = "lynx tuft frogs, dolphins abduct by proxy the ever awkward klutz, dud, dummkopf,"
-        "jinx snubnose filmgoer, orphan sgt. ";
+    std::string text = "8";
 
     loadGlyphData( "textures/msdf_test2.json"  );
-    std::vector<float> vertices = generateVertexData(text, 10.0f, SCR_HEIGHT - 120, 0.8f);
+    std::vector<float> vertices = generateVertexData(text, 100, 100, 4.0f);
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -206,7 +231,7 @@ int main()
 
     // load and create a texture
     // -------------------------
-    unsigned int texture1, texture2;
+    unsigned int texture1;
     // texture 1
     // ---------
     glGenTextures(1, &texture1);
@@ -223,24 +248,34 @@ int main()
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
     unsigned char *data = stbi_load("textures/msdf_test2.png", &width, &height, &nrChannels, 0);
     if (data)
-    {
+        {
         GLenum format = (nrChannels == 4) ? GL_RGBA : (nrChannels == 3) ? GL_RGB : GL_RED;
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         //glGenerateMipmap(GL_TEXTURE_2D);
-    }
+        }
     else
-    {
+        {
         std::cout << "Failed to load texture" << std::endl;
-    }
+        }
     stbi_image_free(data);
 
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
-    glUniform1i(glGetUniformLocation(ourShader.ID, "msdf"), 0);
+    glUniform1i(glGetUniformLocation(ourShader.ID, "u_msdf"), 0);
     // or set it via the texture class
     //ourShader.setInt("texture2", 1);
+
+    // Set uniforms for msdf_text_glow4.frag
+    //glUniform4f(glGetUniformLocation(ourShader.ID, "fgColor"), 1.0f, 1.0f, 1.0f, 1.0f);   // white text
+    //glUniform4f(glGetUniformLocation(ourShader.ID, "bgColor"), 0.0f, 0.0f, 0.0f, 0.0f);   // white text
+
+    //glUniform4f(glGetUniformLocation(ourShader.ID, "glowColor"), 1.0f, 0.8f, 0.0f, 1.0f);    // yellow halo
+    //glUniform1f(glGetUniformLocation(ourShader.ID, "glowRange"), 0.2f);                     // halo thickness
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // render loop
     // -----------

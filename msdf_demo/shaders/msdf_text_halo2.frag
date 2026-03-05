@@ -5,10 +5,10 @@ out vec4 color;
 
 uniform sampler2D u_msdf;
 uniform vec4 bgColor; // unused for transparent background
-
+const float max_halo_edge = 20.0; // controls how far the halo spreads
 
 float screenPxRange() {
-    vec2 unitRange = vec2(6.0) / vec2(textureSize(u_msdf, 0));
+    vec2 unitRange = vec2(32.0) / vec2(textureSize(u_msdf, 0));
     vec2 screenTexSize = vec2(1.0) / fwidth(texCoord);
     return max(0.5 * dot(unitRange, screenTexSize), 1.0);
 }
@@ -26,7 +26,10 @@ void main() {
     float glyphAlpha = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 
     // Halo effect opacity (soft glow outside glyph)
-    float haloEdge = 5.0; // controls how far the halo spreads
+
+    //float haloEdge = min(5.0, screenPxRange() * 0.45);
+    float haloEdge = min(max_halo_edge, screenPxRange() * 0.45 );
+
     float haloAlpha = clamp(1.0 - abs(screenPxDistance) / haloEdge, 0.0, 1.0);
     haloAlpha *= (1.0 - glyphAlpha); // mask so halo doesn't overwrite glyph
 	

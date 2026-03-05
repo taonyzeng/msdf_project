@@ -7,6 +7,10 @@
 
 #include <shader_m.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -31,7 +35,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "msdf texture test", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -56,34 +60,24 @@ int main()
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader ourShader("shaders/4.2.texture.vs", "shaders/4.2.texture.fs");
-    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text.frag");
+    Shader ourShader("shaders/4.2.texture.vs", "shaders/softness.frag");
     ourShader.setVec4( "bgColor", glm::vec4(0, 0, 0, 0));
     ourShader.setVec4( "fgColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-    float xl = 365.5f/1024;
-    float xr = 434.5f/1024;
-    float yb = 852.5f/1024;
-    float yt = 937.5f/1024;
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    /*float vertices[] = {
-        // positions          // colors           // texture coords
-         xr, yt, 0.0f,   1.0f, 0.0f, 0.0f,   xr, yt, // top right
-         xr, yb, 0.0f,   0.0f, 1.0f, 0.0f,   xr, yb, // bottom right
-         xl, yb, 0.0f,   0.0f, 0.0f, 1.0f,   xl, yb, // bottom left
-         xl, yt, 0.0f,   1.0f, 1.0f, 0.0f,   xl, yt  // top left
-    };*/
+    float cx = (float)SCR_WIDTH / 2.0f;
+    float cy = (float)SCR_HEIGHT / 2.0f;
+    float scale = 4.0f;
+    float halfSide = 24.0f * scale; // Half of 48
 
     float vertices[] = {
-        // positions          // colors           // texture coords
-         1.0f,  1.0f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f,  // top left
+        // positions                    // colors           // texture coords
+        cx + halfSide, cy + halfSide, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+        cx + halfSide, cy - halfSide, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        cx - halfSide, cy + halfSide, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
 
-         1.0f, -1.0f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        -1.0f, -1.0f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        -1.0f,  1.0f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+        cx + halfSide, cy - halfSide, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        cx - halfSide, cy - halfSide, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        cx - halfSide, cy + halfSide, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
     };
 
     unsigned int indices[] = {
@@ -131,7 +125,7 @@ int main()
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-    unsigned char *data = stbi_load("textures/msdf_test2.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("textures/e_letter.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         GLenum format = (nrChannels == 4) ? GL_RGBA : (nrChannels == 3) ? GL_RGB : GL_RED;
@@ -170,7 +164,12 @@ int main()
     // -------------------------------------------------------------------------------------------
     ourShader.use(); // don't forget to activate/use the shader before setting uniforms!
     // either set it manually like so:
-    ourShader.setInt( "msdf", 0 );
+    ourShader.setInt( "u_msdf", 0 );
+
+    //glm::mat4 projection = glm::mat4(1.0f);
+    glm::mat4 projection = glm::ortho(0.0f, static_cast<float>(SCR_WIDTH), 0.0f, static_cast<float>(SCR_HEIGHT));
+    glUniformMatrix4fv(glGetUniformLocation(ourShader.ID, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
     //glUniform1i(glGetUniformLocation(ourShader.ID, "texture1"), 0);
     // or set it via the texture class
     //ourShader.setInt("texture2", 1);
