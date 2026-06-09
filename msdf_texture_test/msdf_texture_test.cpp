@@ -54,30 +54,33 @@ int main()
     }
 
     //glEnable(GL_CULL_FACE);
-    //glEnable(GL_BLEND);
-    //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // build and compile our shader zprogram
     // ------------------------------------
     //Shader ourShader("shaders/4.2.texture.vs", "shaders/4.2.texture.fs");
-    Shader ourShader("shaders/4.2.texture.vs", "shaders/softness.frag");
-    ourShader.setVec4( "bgColor", glm::vec4(0, 0, 0, 0));
-    ourShader.setVec4( "fgColor", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    //Shader ourShader("shaders/4.2.texture.vs", "shaders/softness_2.frag");
+    Shader ourShader("shaders/4.2.texture.vs", "shaders/msdf_text.frag");    
+    ourShader.use();    
+    ourShader.setVec4( "fg_clr", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f));
+    //ourShader.setVec4( "bg_clr", glm::vec4(0.0f, 1.0f, 1.0f, 1.0f) );
 
     float cx = (float)SCR_WIDTH / 2.0f;
     float cy = (float)SCR_HEIGHT / 2.0f;
-    float scale = 4.0f;
-    float halfSide = 24.0f * scale; // Half of 48
+    float scale = 16.0f;
+    float halfW = 13.0f * 0.5f * scale; // Half of 13
+    float halfH = 18.0f * 0.5f * scale; // Half of 18
 
     float vertices[] = {
-        // positions                    // colors           // texture coords
-        cx + halfSide, cy + halfSide, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
-        cx + halfSide, cy - halfSide, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        cx - halfSide, cy + halfSide, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
+        // positions                        // colors           // texture coords
+        cx + halfW, cy + halfH, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, // top right
+        cx + halfW, cy - halfH, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        cx - halfW, cy + halfH, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f, // top left
 
-        cx + halfSide, cy - halfSide, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
-        cx - halfSide, cy - halfSide, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
-        cx - halfSide, cy + halfSide, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
+        cx + halfW, cy - halfH, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // bottom right
+        cx - halfW, cy - halfH, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f, // bottom left
+        cx - halfW, cy + halfH, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f  // top left
     };
 
     unsigned int indices[] = {
@@ -116,8 +119,8 @@ int main()
     glGenTextures(1, &texture1);
     glBindTexture(GL_TEXTURE_2D, texture1);
      // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   // set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -125,7 +128,7 @@ int main()
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
-    unsigned char *data = stbi_load("textures/e_letter.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("textures/test_msdf_52.png", &width, &height, &nrChannels, 0);
     if (data)
     {
         GLenum format = (nrChannels == 4) ? GL_RGBA : (nrChannels == 3) ? GL_RGB : GL_RED;
@@ -142,8 +145,8 @@ int main()
     glGenTextures(1, &texture2);
     glBindTexture(GL_TEXTURE_2D, texture2);
     // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);   // set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);   // set texture wrapping to GL_CLAMP_TO_EDGE (default wrapping method)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     // set texture filtering parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -184,6 +187,7 @@ int main()
 
         // render
         // ------
+        //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // bind textures on corresponding texture units

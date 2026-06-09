@@ -18,16 +18,16 @@ float screenPxRange() {
 	return max(0.5 * dot(unitRange, screenTexSize), 1.0);
 }
 
-const vec4 fgColor = vec4(0.1, 0.3, 0.4, 1.0);
-const vec4 outlineColor = vec4(0.95, 0.4, 0.3, 1.0);
+const vec4 fgColor = vec4(0.0, 1.0, 1.0, 1.0);
+const vec4 outlineColor = vec4(0.0, 0.0, 0.0, 1.0);
 
 // Ranges:
 // -0.3 < thickness < 0.3
 // 0.0 < softness < 0.5
-float thickness = -0.3;
-float outlineThickness = 0.3;
-float softness = 0.2;
-float outlineSoftness = 0.5;
+float thickness = -0.0;
+float outlineThickness = 0.0;
+float softness = 0.0;
+float outlineSoftness = 0.0;
 
 void main() {
 	vec4 texel = texture(u_msdf, texCoord);
@@ -36,7 +36,7 @@ void main() {
 	if (dist <= 0.0001) {
 		discard;
 	}
-	float pxRange = screenPxRange();
+	float pxRange = 12.0f;//screenPxRange();
 	dist -= 0.5;
 	
 	dist += thickness;
