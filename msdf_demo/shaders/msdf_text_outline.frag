@@ -23,16 +23,26 @@ float median(float r, float g, float b) {
 
 void main() {
 
+    const float glyphEdge = 0.6f; // push edge inward, "shrinking" the fill slightly
+
     float smoothing = 1.0f / pxRange;
+    float softness = 0.25f; // 0 = hard uniform outline, > 0 = fades outward (max ~0.5 - outlineDistance)
 
     vec3 msd = texture(msdf, texCoord).rgb;
     float sd = median(msd.r, msd.g, msd.b);
 
-    float outlineFactor = smoothstep(0.5 - smoothing, 0.5 + smoothing, sd );
+    // 1 inside glyph body, 0 outside
+    float fillMask = smoothstep(glyphEdge - smoothing, glyphEdge + smoothing, sd);
 
-    vec4 color = mix(outlineColor, fgColor, outlineFactor);
-    float alpha = smoothstep(outlineDistance - smoothing, outlineDistance + smoothing, sd );
+    // Outer edge: sharp when softness=0 (just AA smoothing), fades inward as softness increases
+    float outerEdge = smoothstep(outlineDistance - smoothing, outlineDistance + smoothing + softness, sd);
 
-	out_color = vec4( color.rgb, color.a * alpha );
+    // Outline ring = visible outer area minus glyph fill
+    float outlineFade = outerEdge * (1.0 - fillMask);
+
+    vec3 rgb = outlineColor.rgb * outlineFade + fgColor.rgb * fillMask;
+    float a   = outlineColor.a  * outlineFade + fgColor.a  * fillMask;
+
+    out_color = vec4(rgb, a);
 
 }
